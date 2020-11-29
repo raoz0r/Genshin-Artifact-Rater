@@ -59,6 +59,7 @@ def parse(text):
 	# print(text)
 	stat = None
 	results = []
+	v = None
 	for line in text.splitlines():
 		if not line or line.lower() == 'in':
 			continue
@@ -67,19 +68,31 @@ def parse(text):
 		if fuzz.partial_ratio(line, 'Piece Set') > 80 and len(line) > 4:
 			break
 		value = hp_reg.search(line)
+		print('line:',line)
 		if value:
 			print(line)
 			value = int(value[0].replace(',', ''))
 			results += [['Vida', value]]
 			stat = None
 			continue
-		# print(line)
+		
+		if "Bönus de Dano" in line:
+		    continue
+        
+		line = limpar(line)
 		extract = process.extractOne(line, choices, scorer=fuzz.partial_ratio)
 		# print(process.extract(line, choices, scorer=fuzz.partial_ratio))
-		if ((extract[1] > 80) and len(line) > 1) or stat:
-			print(line)
+		if ((extract[1] > 80) and len(line) > 1) or stat or "%" in line:
+			# print('ext:',line)
 			if (extract[1] > 80):
+				print('match:',extract[0])
 				stat = extract[0]
+				if v != None: 
+				    stat = extract[0] + "%"
+				    results += [[stat,v]]
+				    stat = None
+				    v = None
+
 			line = line.replace(',','')
 			value = reg.findall(line)
 			if not value:
@@ -89,11 +102,16 @@ def parse(text):
 				continue
 			if line.find('%', line.find(value)) != -1 and '.' not in value:
 				value = value[:-1] + '.' + value[-1]
+				
 			if '.' in value:
 				value = float(value)
+				if stat is None:
+				    v = value
+				    continue
 				stat += '%'
 			else:
 				value = int(value)
+			print('stat:',stat)
 			results += [[stat, value]]
 			stat = None
 			if len(results) == 5:
